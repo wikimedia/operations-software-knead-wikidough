@@ -80,8 +80,8 @@ def make_message_edns(host, ip, record_type, dnssec):
 )
 def test_dot_plain_query(make_message, record_type):
     """Send a query to the resolver over TLS and verify the response."""
-    query = dns.query.tls(make_message, RESOLVER_IP)
-    assert EXAMPLE_ORG_IP == get_rrset(query)
+    response = dns.query.tls(make_message, RESOLVER_IP)
+    assert EXAMPLE_ORG_IP == get_rrset(response)
 
 
 @pytest.mark.parametrize(
@@ -90,9 +90,9 @@ def test_dot_plain_query(make_message, record_type):
 )
 def test_doh_plain_query(make_message, record_type):
     """Send a query to the resolver over HTTPS and verify the response."""
-    query = dns.query.https(make_message, RESOLVER_URL,
-                            path='/dns-query', post=False)
-    assert EXAMPLE_ORG_IP == get_rrset(query)
+    response = dns.query.https(make_message, RESOLVER_URL,
+                               path='/dns-query', post=False)
+    assert EXAMPLE_ORG_IP == get_rrset(response)
 
 
 @pytest.mark.parametrize(
@@ -109,9 +109,9 @@ def test_dot_edns_query_ulsfo(make_message_edns,
     this case, if a query is sent from the west coast of Canada, the lookup
     should return the IP address for the Ulsfo cluster.
     """
-    query = dns.query.tls(make_message_edns, RESOLVER_IP, record_type)
-    assert ULSFO_IP == get_rrset(query)
-    assert CODFW_IP != get_rrset(query)
+    response = dns.query.tls(make_message_edns, RESOLVER_IP, record_type)
+    assert ULSFO_IP == get_rrset(response)
+    assert CODFW_IP != get_rrset(response)
 
 
 @pytest.mark.parametrize(
@@ -121,9 +121,9 @@ def test_dot_edns_query_ulsfo(make_message_edns,
 def test_dot_edns_query_codfw(make_message_edns,
                               host, ip, record_type, dnssec):
     """Similar to test_dot_edns_query_ulsfo, but from a different subnet."""
-    query = dns.query.tls(make_message_edns, RESOLVER_IP, record_type)
-    assert CODFW_IP == get_rrset(query)
-    assert ULSFO_IP != get_rrset(query)
+    response = dns.query.tls(make_message_edns, RESOLVER_IP, record_type)
+    assert CODFW_IP == get_rrset(response)
+    assert ULSFO_IP != get_rrset(response)
 
 
 @pytest.mark.parametrize(
@@ -135,19 +135,19 @@ def test_dot_edns_query_no_wikimedia(make_message_edns,
     """Tests if ECS is enabled for non-WMF nameservers.
 
     As described in make_message_edns(), ECS should _not_ be enabled for
-    non-WMF authoritative nameservers and in such a case, a query to
-    o-o.myaddr.l.google.com with the client subnet option should still return
-    the IP of the resolver (Wikidough) and not the client. (This is made
-    possible by querying o-o.myaddr.l.google.com as it returns the address of
-    the resolver and the client subnet, if any.)
+    non-WMF authoritative nameservers to protect the privacy of clients and
+    their IP addresses and a query to these servers should not send the ECS
+    option. This test confirms that and is made possible by querying
+    o-o.myaddr.l.google.com as it returns the address of the resolver and the
+    client subnet, if any.
 
     To summarize, if only the address of the resolver (Wikidough) is returned
     in this test, ECS is not enabled in Wikidough (other than for WMF
     authoritative nameservers). But if the address of the client is returned in
     addition to that of the resolver, ECS is enabled.
     """
-    query = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.TXT)
-    resolver = get_rrset(query, record_type=dns.rdatatype.TXT).strip('"')
+    response = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.TXT)
+    resolver = get_rrset(response, record_type=dns.rdatatype.TXT).strip('"')
 
     assert RESOLVER_IP == resolver
     assert EASTCOAST_CANADA_IP != resolver
@@ -171,8 +171,8 @@ def test_dnssec_do_bit(make_message_edns, host, ip, record_type, dnssec):
 
     Enabling DNSSEC support in Wikidough was discussed in T259816.
     """
-    query = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.A)
-    flags = dns.flags.to_text(query.flags)
+    response = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.A)
+    flags = dns.flags.to_text(response.flags)
     assert "AD" in flags
 
 
@@ -187,16 +187,16 @@ def test_dnssec_no_do_bit(make_message_edns, host, ip, record_type, dnssec):
     AD-bit is not set in the reply when the client does not set the DO-bit in
     the query.
     """
-    query = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.A)
-    flags = dns.flags.to_text(query.flags)
+    response = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.A)
+    flags = dns.flags.to_text(response.flags)
     assert "AD" not in flags
 
     # This is an additional test to verify that if the AD-bit is set but not
     # the DO-bit, the AD-bit will still be set in the reply. This matches
     # https://tools.ietf.org/html/rfc6840#section-5.7.
     make_message_edns.flags |= dns.flags.AD
-    ad_query = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.A)
-    ad_flags = dns.flags.to_text(ad_query.flags)
+    ad_response = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.A)
+    ad_flags = dns.flags.to_text(ad_response.flags)
     assert "AD" in ad_flags
 
 
@@ -211,8 +211,8 @@ def test_dot_qname_minimization(make_message, host, record_type):
     pdns-recursor. This test does not depend on the dnsdist frontend so
     checking it for DoT will cover DoH as well.
     """
-    query = dns.query.tls(make_message, RESOLVER_IP, dns.rdatatype.TXT)
-    qname_response = get_rrset(query, dns.rdatatype.TXT).strip('"')
+    response = dns.query.tls(make_message, RESOLVER_IP, dns.rdatatype.TXT)
+    qname_response = get_rrset(response, dns.rdatatype.TXT).strip('"')
     assert "HOORAY - QNAME minimisation is enabled on your resolver :)!" == \
            qname_response
     assert qname_response is not None
