@@ -249,11 +249,11 @@ def test_doh_response_headers():
     url = base64.urlsafe_b64encode(message.to_wire())
     headers = {"content-type": "application/dns-message"}
 
-    doh_request = requests.get(RESOLVER_URL + "/dns-query",
-                               params={"dns": url}, headers=headers)
-    doh_request.raise_for_status()
+    doh_response = requests.get(RESOLVER_URL + "/dns-query",
+                                params={"dns": url}, headers=headers)
+    doh_response.raise_for_status()
 
-    response_headers = doh_request.headers
+    response_headers = doh_response.headers
 
     # HSTS, set by customResponseHeaders.
     hsts_value = "max-age=106384710; includeSubDomains; preload"
