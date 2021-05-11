@@ -13,6 +13,8 @@ components: the dnsdist frontend and the PowerDNS Recursor backend, and how
 they interact with each other.
 """
 
+import base64
+
 import dns.message
 import dns.query
 
@@ -235,3 +237,28 @@ def test_doh_pages():
 
     no_path_page = requests.get(RESOLVER_URL + '/random-path')
     assert 404 == no_path_page.status_code
+
+
+def test_doh_response_headers():
+    """Checks that the correct response headers are returned from a DoH query.
+
+    This runs against a base list of response headers that we care about; we
+    also try to avoid redundancy as dnsdist has similar tests.
+    """
+    message = dns.message.make_query("wikipedia.org", "A")
+    url = base64.urlsafe_b64encode(message.to_wire())
+    headers = {"content-type": "application/dns-message"}
+
+    doh_request = requests.get(RESOLVER_URL + "/dns-query",
+                               params={"dns": url}, headers=headers)
+    doh_request.raise_for_status()
+
+    response_headers = doh_request.headers
+
+    # HSTS, set by customResponseHeaders.
+    hsts_value = "max-age=106384710; includeSubDomains; preload"
+    assert response_headers["strict-transport-security"] == hsts_value
+
+    # cache-control, set by sendCacheControlHeaders.
+    assert "cache-control" in response_headers.keys()
+    assert "max-age" in response_headers["cache-control"]
