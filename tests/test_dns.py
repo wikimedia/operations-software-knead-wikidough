@@ -246,11 +246,11 @@ def test_doh_response_headers():
     also try to avoid redundancy as dnsdist has similar tests.
     """
     message = dns.message.make_query("wikipedia.org", "A")
-    url = base64.urlsafe_b64encode(message.to_wire())
+    url_params = base64.urlsafe_b64encode(message.to_wire())
     headers = {"content-type": "application/dns-message"}
 
     doh_response = requests.get(RESOLVER_URL + "/dns-query",
-                                params={"dns": url}, headers=headers)
+                                params={"dns": url_params}, headers=headers)
     doh_response.raise_for_status()
 
     response_headers = doh_response.headers

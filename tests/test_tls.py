@@ -210,3 +210,20 @@ def test_dot_session_resumption():
                               session=s_session) as session_ssock:
             assert session_ssock.session.has_ticket is True
             assert session_ssock.session_reused is True
+
+
+def test_certificate_cn():
+    """Tests the TLS certificate presented by Wikdough to check the fields.
+
+    Currently this only checks if the commonName matches. The certificate
+    validity checks are performed by Icinga's check_http and Wikidough's
+    monitoring so it doesn't make sense to replicate them here.
+    """
+    # FIXME: Update this for wikimedia-dns.org.
+    cert = {"subject": ((("commonName", RESOLVER),),)}
+    assert ssl.match_hostname(cert, RESOLVER) is None
+
+    # We should never use the unified cert for Wikidough.
+    with pytest.raises(ssl.SSLCertVerificationError):
+        cert_wmf = {"subject": ((("commonName", "*.wikipedia.org"),),)}
+        ssl.match_hostname(cert_wmf, RESOLVER)
