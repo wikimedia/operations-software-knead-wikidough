@@ -32,7 +32,7 @@ import ssl
 
 import pytest
 
-RESOLVER = "malmok.wikimedia.org"
+RESOLVER = "wikimedia-dns.org"
 
 
 @pytest.fixture(scope='function')

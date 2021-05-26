@@ -22,8 +22,8 @@ import pytest
 
 import requests
 
-RESOLVER_URL = "https://malmok.wikimedia.org"  # /dns-query where required.
-RESOLVER_IP = "208.80.153.43"
+RESOLVER_URL = "https://wikimedia-dns.org"  # /dns-query where required.
+RESOLVER_IP = "185.71.138.138"
 
 ULSFO_IP = "198.35.26.96"
 CODFW_IP = "208.80.154.224"
@@ -151,7 +151,9 @@ def test_dot_edns_query_no_wikimedia(make_message_edns,
     response = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.TXT)
     resolver = get_rrset(response, record_type=dns.rdatatype.TXT).strip('"')
 
-    assert RESOLVER_IP == resolver
+    # FIXME: This has changed since the anycasted IP, as expected; need to get
+    # PRODUCTION_NETWORKS from network::constants?
+    assert resolver in ("208.80.153.43", "208.80.153.6", "208.80.153.38")
     assert EASTCOAST_CANADA_IP != resolver
 
 
