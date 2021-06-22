@@ -14,6 +14,7 @@ they interact with each other.
 """
 
 import base64
+import ipaddress
 
 import dns.message
 import dns.query
@@ -24,6 +25,16 @@ import requests
 
 RESOLVER_URL = "https://wikimedia-dns.org"  # /dns-query where required.
 RESOLVER_IP = "185.71.138.138"
+
+PRODUCTION_NETWORKS = [
+    # puppet: modules/network/data/data.yaml
+    ipaddress.ip_network(network) for network in [
+        "91.198.174.0/24",
+        "208.80.152.0/22",
+        "198.35.26.0/23",
+        "103.102.166.0/24",
+    ]
+]
 
 ULSFO_IP = "198.35.26.96"
 CODFW_IP = "208.80.154.224"
@@ -151,9 +162,10 @@ def test_dot_edns_query_no_wikimedia(make_message_edns,
     response = dns.query.tls(make_message_edns, RESOLVER_IP, dns.rdatatype.TXT)
     resolver = get_rrset(response, record_type=dns.rdatatype.TXT).strip('"')
 
-    # FIXME: This has changed since the anycasted IP, as expected; need to get
-    # PRODUCTION_NETWORKS from network::constants?
-    assert resolver in ("208.80.153.43", "208.80.153.6", "208.80.153.38")
+    # As an anycasted service, the resolver IP can be any of the Wikidough
+    # hosts so we check if the IP is in the list of our production networks.
+    assert any(ipaddress.ip_address(resolver) in network
+               for network in PRODUCTION_NETWORKS)
     assert EASTCOAST_CANADA_IP != resolver
 
 
