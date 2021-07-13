@@ -36,8 +36,8 @@ PRODUCTION_NETWORKS = [
     ]
 ]
 
-ULSFO_IP = "198.35.26.96"
-CODFW_IP = "208.80.154.224"
+ULSFO_NETWORK = ipaddress.ip_network("198.35.26.0/23")
+CODFW_NETWORK = ipaddress.ip_network("208.80.152.0/22")
 
 EXAMPLE_ORG_IP = "93.184.216.34"
 WESTCOAST_CANADA_IP = "24.64.64.1"
@@ -112,8 +112,8 @@ def test_doh_plain_query(make_message, record_type):
     ('host, ip, record_type, dnssec'),
     [('dyna.wikimedia.org', WESTCOAST_CANADA_IP, None, False)],
 )
-def test_dot_edns_query_ulsfo(make_message_edns,
-                              host, ip, record_type, dnssec):
+def test_dot_ecs_query_ulsfo(make_message_edns,
+                             host, ip, record_type, dnssec):
     """Send a query over TLS with the EDNS Client Subnet option.
 
     This test sends a query to Wikidough with the client subnet option. Since
@@ -123,20 +123,20 @@ def test_dot_edns_query_ulsfo(make_message_edns,
     should return the IP address for the Ulsfo cluster.
     """
     response = dns.query.tls(make_message_edns, RESOLVER_IP, record_type)
-    assert ULSFO_IP == get_rrset(response)
-    assert CODFW_IP != get_rrset(response)
+    assert ipaddress.ip_address(get_rrset(response)) in ULSFO_NETWORK
+    assert ipaddress.ip_address(get_rrset(response)) not in CODFW_NETWORK
 
 
 @pytest.mark.parametrize(
     ('host, ip, record_type, dnssec'),
     [('dyna.wikimedia.org', EASTCOAST_CANADA_IP, None, False)],
 )
-def test_dot_edns_query_codfw(make_message_edns,
-                              host, ip, record_type, dnssec):
+def test_dot_ecs_query_codfw(make_message_edns,
+                             host, ip, record_type, dnssec):
     """Similar to test_dot_edns_query_ulsfo, but from a different subnet."""
     response = dns.query.tls(make_message_edns, RESOLVER_IP, record_type)
-    assert CODFW_IP == get_rrset(response)
-    assert ULSFO_IP != get_rrset(response)
+    assert ipaddress.ip_address(get_rrset(response)) in CODFW_NETWORK
+    assert ipaddress.ip_address(get_rrset(response)) not in ULSFO_NETWORK
 
 
 @pytest.mark.parametrize(
